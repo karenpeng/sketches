@@ -4,8 +4,7 @@ function Walker(x, y) {
 }
 
 Walker.prototype.walk = function (x, y) {
-	const maxV = 20;
-
+	var maxV = 20;
 	var lerpX = map(noise(this.noff.x, this.noff.y), 0, 1, maxV * -1, maxV);
 	var lerpY = map(noise(this.noff.y, this.noff.x), 0, 1, maxV * -1, maxV);
 
