@@ -1,120 +1,92 @@
-var FRAME_RATE = 80;
-var WALKER_NUMBER = 10;
-var interval = 22 * FRAME_RATE;
-var cleaning = false;
-var transparency = 0;
-var walkers = [];
-var intervalId1, intervalId2;
+var FRAME_RATE = 50;
+var MY_RADIUS = 10;
+var MAX_SPEED = 10;
+var walkerManager;
 
-function Walker(x, y, index) {
+function Walker(x, y, radius, index) {
+  this.x = x;
+  this.y = y;
+  this.radius = radius;
+  this.index = index;
+}
+
+Walker.prototype.update = function(time) {
+  this.x += (sin(this.index + time) + map(noise(time, this.index), 0, 1, -1, 1));
+  this.y += (cos(this.index + time) + map(noise(time, this.index), 0, 1, -1, 1));
+  this.radius -= 0.08;
+}
+
+Walker.prototype.render = function() {
+  noStroke();
+  fill(206, 33, 89, 90);
+  ellipse(this.x, this.y, this.radius + 2, this.radius + 2);
+  fill(206, 33, 89);
+  ellipse(this.x, this.y, this.radius, this.radius);
+}
+
+function WalkerManager(x, y) {
   this.x = x;
   this.y = y;
   this.loc = createVector(random(x), random(y));
   this.noff = createVector(random(10), random(10));
-  this.index = index;
-  this.moving = true;
-  var hue = 111 + this.index * 30;
-  var light = 52 + this.index * 4;
-  this.c = color('hsl(' + hue +',72%, ' + light + '%)');
+  this.counter = 0;
+  this.history = [];
 }
 
-Walker.prototype.reset = function() {
-  this.loc = createVector(this.x, this.y);
-  this.index = WALKER_NUMBER - this.index - 1;
-}
+WalkerManager.prototype.walk = function (time) {
 
-Walker.prototype.toggle = function() {
-  this.moving = !this.moving;
-}
+  if (isMousePressed) {
+    var easing = createVector(mouseX, mouseY).sub(this.loc).mult(0.06);
+    this.loc.add(easing);
+  } else {
+    var lerpX = map(noise(this.noff.y, this.noff.x), 0, 1, MAX_SPEED * -1, MAX_SPEED);
+    var lerpY = map(noise(this.noff.x, this.noff.y), 0, 1, MAX_SPEED * -1, MAX_SPEED);
 
-Walker.prototype.walk = function (x, y) {
-  if (!this.moving) {
-    return;
+    this.loc.add(createVector(lerpX, lerpY));
+    this.loc.x = constrain(this.loc.x, MY_RADIUS, width - MY_RADIUS);
+    this.loc.y = constrain(this.loc.y, MY_RADIUS, height - MY_RADIUS);
+
+    var nLerp = map(noise(this.counter), 0, 1, 0, 0.01);
+    this.noff.add(nLerp, nLerp);
   }
-  var maxV = 20;
-  var lerpX = map(noise(this.noff.x, this.noff.y), 0, 1, maxV * -1, maxV);
-  var lerpY = map(noise(this.noff.y, this.noff.x), 0, 1, maxV * -1, maxV);
 
-  this.loc.add(createVector(lerpX, lerpY));
-
-  var nLerpX = map(noise(this.index), 0, 1, 0, 0.02);
-  var nLerpY = map(noise(this.index), 0, 1, 0, 0.02);
-
-  this.noff.add(nLerpX, nLerpY);
-
-  this.loc.x = constrain(this.loc.x, 0, width);
-  this.loc.y = constrain(this.loc.y, 0, height);
+  this.radius = noise(time) * 30;
+  this.history.push(new Walker(this.loc.x, this.loc.y, this.radius, this.counter));
+  this.counter++;
 };
 
-Walker.prototype.mirror = function (time) {
-  if (!this.moving ||
-      this.loc.x === 0 || this.loc.x === width || this.loc.y === 0 || this.loc.y === height) {
-    return;
-  }
-  noStroke();
-  var n = noise(time);
-
-  fill(this.c, map(n, 0, 1, 90, 100));
-  var radius = map(n, 0, 1, 1, 2 + this.index * 2.2);
-  ellipse(this.loc.x, this.loc.y, radius, radius);
-  // ellipse(this.loc.x, height - this.loc.y, radius, radius);
-  // ellipse(width - this.loc.x, this.loc.y, radius, radius);
-  // ellipse(width - this.loc.x, height - this.loc.y, radius, radius);
-};
-
-function pause(frame) {
-  clearInterval(intervalId1);
-  clearInterval(intervalId2);
-  var luckyGirl = Math.floor(random() * WALKER_NUMBER);
-  console.log(luckyGirl)
-  intervalId1 = setTimeout(function() {
-    walkers[luckyGirl].toggle();
-  }, 0)
-
-  intervalId2 = setTimeout(function() {
-    walkers[luckyGirl].reset();
-    walkers[luckyGirl].toggle();
-  }, map(noise(frame), 0, 1, 1, 3) * FRAME_RATE)
+WalkerManager.prototype.update = function(time) {
+  this.history.forEach(function(walker, index) {
+    if (index === this.history.length - 1) {
+      return;
+    }
+    walker.update(time);
+    if (walker.radius <= 0) {
+      this.history.splice(index, 1);
+    }
+  }.bind(this));
 }
+
+WalkerManager.prototype.render = function () {
+  this.history.forEach(function(walker, index) {
+    walker.render();
+  });
+  var lastWalker = this.history[this.history.length - 1];
+  fill(206, 33, 89, 90);
+  var radius = Math.min(lastWalker.radius + 6, MY_RADIUS * 2);
+  ellipse(lastWalker.x, lastWalker.y, radius, radius);
+};
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
   frameRate(FRAME_RATE);
   background(255);
-  for(var i = 0; i < 4; i++) {
-    walkers.push(new Walker(width, height, walkers.length - 1));
-  }
+  walkerManager = new WalkerManager(width, height);
 }
 
 function draw() {
-  if (frameCount % interval === 0) {
-    cleaning = true;
-  }
-
-  if (cleaning) {
-    transparency += 0.2;
-  }
-
-  if (transparency >= 100) {
-    cleaning = false;
-    transparency = 0;
-  }
-
-  background(255, transparency);
-
-  var ran = random();
-  if (ran < 0.2 && walkers.length < WALKER_NUMBER) {
-    walkers.push(new Walker(width, height, walkers.length - 1))
-  }
-
-  if (ran < 0.002) {
-    pause();
-  }
-
-  if (transparency < 50) {
-    walkers.forEach(function(walker, index) {
-      walker.walk();
-      walker.mirror(frameCount * 0.1);
-    });
-  }
+  background(255);
+  walkerManager.walk(frameCount * 0.1);
+  walkerManager.render();
+  walkerManager.update(frameCount * 0.1);
 }
