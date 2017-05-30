@@ -1,6 +1,6 @@
 var FRAME_RATE = 50;
 var MY_RADIUS = 10;
-var MAX_SPEED = 10;
+var MAX_SPEED = 8;
 var walkerManager;
 
 function Walker(x, y, radius, index) {
@@ -28,6 +28,8 @@ function WalkerManager(x, y) {
   this.x = x;
   this.y = y;
   this.loc = createVector(random(x), random(y));
+  this.loc.x = constrain(this.loc.x, MY_RADIUS, width - MY_RADIUS);
+  this.loc.y = constrain(this.loc.y, MY_RADIUS, height - MY_RADIUS);
   this.noff = createVector(random(10), random(10));
   this.counter = 0;
   this.history = [];
@@ -72,8 +74,8 @@ WalkerManager.prototype.render = function () {
     walker.render();
   });
   var lastWalker = this.history[this.history.length - 1];
-  fill(206, 33, 89, 90);
   var radius = Math.min(lastWalker.radius + 6, MY_RADIUS * 2);
+  fill(206, 33, 89, 90);
   ellipse(lastWalker.x, lastWalker.y, radius, radius);
 };
 
