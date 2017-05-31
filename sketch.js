@@ -1,7 +1,7 @@
 var FRAME_RATE = 50;
 var MY_RADIUS = 10;
-var MAX_SPEED = 8;
-var walkerManager;
+var MAX_SPEED = 10;
+var walkerManagers = [];
 
 function Walker(x, y, radius, index) {
   this.x = x;
@@ -11,8 +11,8 @@ function Walker(x, y, radius, index) {
 }
 
 Walker.prototype.update = function(time) {
-  this.x += (sin(this.index + time) + map(noise(time, this.index), 0, 1, -1, 1));
-  this.y += (cos(this.index + time) + map(noise(time, this.index), 0, 1, -1, 1));
+  this.x += (sin(this.index + time) + map(noise(time, this.index), 0, 1, -2, 2));
+  this.y += (cos(this.index + time) + map(noise(time, this.index), 0, 1, -2, 2));
   this.radius -= 0.08;
 }
 
@@ -52,7 +52,7 @@ WalkerManager.prototype.walk = function (time) {
     this.noff.add(nLerp, nLerp);
   }
 
-  this.radius = noise(time) * 30;
+  this.radius = noise(time) * 40;
   this.history.push(new Walker(this.loc.x, this.loc.y, this.radius, this.counter));
   this.counter++;
 };
@@ -83,12 +83,16 @@ function setup() {
   createCanvas(windowWidth, windowHeight);
   frameRate(FRAME_RATE);
   background(255);
-  walkerManager = new WalkerManager(width, height);
+  for(var i = 0; i < 1; i++) {
+    walkerManagers.push(new WalkerManager(width, height));
+  }
 }
 
 function draw() {
   background(255);
-  walkerManager.walk(frameCount * 0.1);
-  walkerManager.render();
-  walkerManager.update(frameCount * 0.1);
+  walkerManagers.forEach(function(walkerManager) {
+    walkerManager.walk(frameCount * 0.1);
+    walkerManager.render();
+    walkerManager.update(frameCount * 0.1);
+  });
 }
